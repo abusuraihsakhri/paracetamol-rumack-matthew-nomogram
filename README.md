@@ -1,7 +1,7 @@
 # Paracetamol Rumack Matthew Nomogram
 
 > **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+> **Reference Guidelines & Standards:** Standard Clinical Formulations & ISO/IEC Quality Frameworks
 
 <div align="center">
 
@@ -16,83 +16,96 @@
 
 ---
 
-## 📖 What It Does
+## What It Does
 
-Rumack-Matthew Nomogram for Acetaminophen Toxicity
-Evaluates 4-to-24 hour post-ingestion acetaminophen serum levels against 150 mcg/mL treatment line for N-acetylcysteine (NAC).
+Rumack-Matthew Nomogram for Acetaminophen Toxicity. Evaluates 4-to-24 hour post-ingestion acetaminophen serum levels against the 150 mcg/mL treatment line for N-acetylcysteine (NAC).
 
-Zero-dependency Python implementation with single and batch evaluation.
+Python implementation with single and batch evaluation modes, FastAPI REST API, and enterprise-grade security features.
+
 Author: Dr. Abu Suraih Sakhri
 License: MIT
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Key Capabilities & Algorithmic Modules
 
-### 🔬 Analytical Functions
+### Analytical Functions
 
-- **`calculate_metrics()`**: Core domain algorithm for paracetamol-rumack-matthew-nomogram.
-- **`process_single()`** — calculates and validates process_single parameters.
-- **`process_batch()`** — calculates and validates process_batch parameters.
-- **`main()`** — calculates and validates main parameters.
+- **`calculate_metrics()`** — Core scoring algorithm with input validation (rejects NaN/Infinity/empty values)
+- **`process_single()`** — Evaluate a single case via CLI
+- **`process_batch()`** — Process CSV batches with path validation and error handling
+- **`main()`** — CLI entry point
+
+### Enterprise Security
+
+- **Zero-PHI Outbound Interceptor** — AST and regex inspection blocking SSNs, MRNs, phone numbers, emails, and patient identifiers
+- **Tamper-Evident HMAC-SHA256 Audit Trail** — Chained, cryptographically signed logs for every evaluation
+- **Path Traversal Protection** — Input/output file paths validated for null bytes and resolved safely
+
+### REST API (FastAPI)
+
+- `GET /health` — Health check
+- `GET /metrics` — Operational metrics
+- `POST /api/audit` — Submit task for evaluation
+- `POST /api/chat` — Supervisory chat query
+- `GET /api/audit/logs` — Retrieve and verify audit trail
 
 ---
 
-## 📐 Mathematical Formulation & Logic
+## Installation
 
-```text
-  score = primary_val
-  rounded_score = round(score, 2)
-  res = calculate_metrics(**kwargs)
-  calc_res = calculate_metrics(**r)
+```bash
+pip install -e .
+```
+
+For development with testing:
+```bash
+pip install -e ".[dev]"
 ```
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## CLI Quickstart & Usage
 
-### 1. Guided Interactive Mode
+### 1. Single Case Evaluation
 ```bash
-python cli.py
+python rumack_matthew.py single --v1 14.5 --v2 4.2 --v3 1.8
 ```
 
-### 2. Direct Parameterized Evaluation
+### 2. Batch CSV Processing
 ```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
+python rumack_matthew.py batch -i sample.csv -o results.csv
+```
+
+### 3. Enterprise CLI (with audit trail)
+```bash
+python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
+python cli.py batch -i sample.csv -o results.csv
+python cli.py verify-audit
+```
+
+### 4. Launch REST API Server
+```bash
+python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
 ### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
+- `--v1` — Primary measurement (default: 10.0)
+- `--v2` — Secondary parameter (default: 5.0)
+- `--v3` — Tertiary parameter (default: 2.0)
 
-### Input Data Schema
+### Input Data Schema (CSV)
 
 | Field | Description | Requirement |
 |:------|:------------|:------------|
-| `Patient_ID` | Parameter / observation metric | Required |
-| `v1` | Parameter / observation metric | Required |
-| `v2` | Parameter / observation metric | Required |
-| `v3` | Parameter / observation metric | Required |
+| `Patient_ID` | Patient identifier | Required |
+| `v1` | Primary measurement | Required |
+| `v2` | Secondary parameter | Required |
+| `v3` | Tertiary parameter | Required |
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
----
-
-## 🧪 Testing & Verification
+## Testing
 
 Run the automated test suite:
 
@@ -103,14 +116,32 @@ pytest -v
 Execute high-throughput batch simulation benchmarks:
 
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+python simulator.py 1000
 ```
 
 ---
 
-## 🐳 Container Deployment
+## Security Configuration
+
+Set the audit secret key via environment variable for production:
+
+```bash
+export AUDIT_SECRET_KEY="your-secure-random-key"
+```
+
+If not set, a cryptographically secure random key is generated per process (suitable for development/testing, but audit trail verification will not persist across restarts).
+
+---
+
+## Container Deployment
 
 ```bash
 docker build -t paracetamol-rumack-matthew-nomogram .
-docker run -p 8000:8000 paracetamol-rumack-matthew-nomogram
+docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secure-key paracetamol-rumack-matthew-nomogram
+```
+
+Or with Docker Compose:
+
+```bash
+docker-compose up -d
 ```

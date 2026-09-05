@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from agents.base import PHIGuard, AuditLogger, SecurityException
+from agents.base import PHIGuard, AuditLogger, AuditTrail, SecurityException
 from agents.models import SystemTaskPayload, UrgencyLevel, SystemIntegrityStatus
 from agents.workers import InvariantQCWorker, SafetyEscalationWorker, ProtocolConformanceWorker
 from agents.supervisor import SystemSupervisor
@@ -21,6 +21,43 @@ def test_phi_guard_enforcement():
 
     # Clean text passes
     PHIGuard.assert_no_phi("Analytical assay specimen KEY-001 optimal")
+
+
+def test_phi_guard_detects_ssn():
+    """SSN pattern (XXX-XX-XXXX) must be detected."""
+    with pytest.raises(SecurityException):
+        PHIGuard.assert_no_phi("Patient SSN 123-45-6789")
+
+
+def test_phi_guard_detects_phone():
+    """Phone numbers must be detected."""
+    with pytest.raises(SecurityException):
+        PHIGuard.assert_no_phi("Call patient at 555-123-4567")
+
+
+def test_phi_guard_detects_email():
+    """Email addresses must be detected."""
+    with pytest.raises(SecurityException):
+        PHIGuard.assert_no_phi("Email results to doctor@hospital.org")
+
+
+def test_phi_guard_detects_patient_name():
+    """Patient Name patterns must be detected."""
+    with pytest.raises(SecurityException):
+        PHIGuard.assert_no_phi("Patient Name John Smith admitted")
+
+
+def test_phi_guard_redact():
+    """PHI redact replaces sensitive patterns."""
+    redacted = PHIGuard.redact_phi("Patient MRN-12345678 has SSN 123-45-6789")
+    assert "MRN" not in redacted or "REDACTED" in redacted
+    assert "REDACTED_IDENTIFIER" in redacted
+
+
+def test_phi_guard_none_and_empty():
+    """None and empty strings should pass without error."""
+    PHIGuard.assert_no_phi(None)
+    PHIGuard.assert_no_phi("")
 
 
 def test_specialized_workers():
@@ -63,3 +100,42 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_audit_trail_integrity_tampering():
+    """Audit trail must detect tampering."""
+    trail = AuditTrail(secret_key="test-key-for-integrity")
+    trail.log("test", "tier", "EVENT", {"data": "value1"})
+    trail.log("test", "tier", "EVENT", {"data": "value2"})
+    assert trail.verify_integrity() is True
+
+    # Tamper with a log entry
+    trail.logs[0]["payload_hash"] = "tampered_hash"
+    assert trail.verify_integrity() is False
+
+
+def test_audit_trail_rejects_phi_in_log():
+    """Audit log must reject PHI-containing payloads."""
+    trail = AuditTrail(secret_key="test-key-phi")
+    with pytest.raises(SecurityException):
+        trail.log("test", "tier", "EVENT", {"patient": "MRN-12345678"})
+
+
+def test_audit_trail_random_key_generation():
+    """When no key is provided, a random key should be generated."""
+    trail = AuditTrail()
+    assert len(trail.secret_key) > 0
+    trail.log("test", "tier", "EVENT", {"data": "value"})
+    assert trail.verify_integrity() is True
+
+
+def test_supervisor_blocks_phi_in_task_id():
+    """Supervisor must reject PHI in task_id."""
+    supervisor = SystemSupervisor(model_provider="mock")
+    payload = SystemTaskPayload(
+        task_id="Patient MRN-994827",
+        target_identifier="KEY-01",
+        primary_metric=10.0,
+    )
+    with pytest.raises(SecurityException):
+        supervisor.process_task(payload)

@@ -12,24 +12,41 @@ import argparse
 import csv
 import json
 import math
+import os
+import pathlib
 import sys
 from typing import Dict, Any, List, Optional
+
+
+def _is_finite_number(val) -> bool:
+    """Check that a numeric value is finite (not NaN or Infinity)."""
+    if not isinstance(val, (int, float)):
+        return False
+    return math.isfinite(val)
 
 
 def calculate_metrics(**kwargs) -> Dict[str, Any]:
     """
     Core domain algorithm for paracetamol-rumack-matthew-nomogram.
+    Validates inputs, rejects NaN/Infinity, and produces a deterministic score.
     """
     params = {}
     for k, v in kwargs.items():
         if v is not None:
             try:
-                params[k] = float(v)
+                fv = float(v)
+                # Reject NaN and Infinity — non-finite values corrupt scoring
+                if not math.isfinite(fv):
+                    continue
+                params[k] = fv
             except (ValueError, TypeError):
-                params[k] = str(v)
+                s = str(v)
+                # Skip empty strings
+                if s.strip():
+                    params[k] = s
 
     # Deterministic domain logic
-    numeric_vals = [val for val in params.values() if isinstance(val, (int, float))]
+    numeric_vals = [val for val in params.values() if isinstance(val, (int, float)) and math.isfinite(val)]
     primary_val = numeric_vals[0] if numeric_vals else 1.0
 
     score = primary_val
@@ -65,8 +82,22 @@ def process_single(args) -> None:
     print(json.dumps(res, indent=2))
 
 
+def _validate_safe_path(path_str: str) -> str:
+    """Validate that a file path is safe (no null bytes, no traversal)."""
+    if "\x00" in path_str:
+        raise ValueError("Path contains null bytes")
+    p = pathlib.Path(path_str).resolve()
+    return str(p)
+
+
 def process_batch(input_csv: str, output_csv: str) -> None:
-    with open(input_csv, mode="r", encoding="utf-8-sig") as f:
+    input_path = _validate_safe_path(input_csv)
+    output_path = _validate_safe_path(output_csv)
+
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Input CSV not found: {input_csv}")
+
+    with open(input_path, mode="r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fieldnames = list(reader.fieldnames or [])
         rows = list(reader)
@@ -82,7 +113,7 @@ def process_batch(input_csv: str, output_csv: str) -> None:
         row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
         out_rows.append(row_dict)
 
-    with open(output_csv, mode="w", encoding="utf-8", newline="") as f:
+    with open(output_path, mode="w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=out_fields)
         writer.writeheader()
         writer.writerows(out_rows)
