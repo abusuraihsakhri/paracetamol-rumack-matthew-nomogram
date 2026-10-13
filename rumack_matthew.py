@@ -1,149 +1,191 @@
 #!/usr/bin/env python3
-"""
-Rumack-Matthew Nomogram for Acetaminophen Toxicity
-Evaluates 4-to-24 hour post-ingestion acetaminophen serum levels against 150 mcg/mL treatment line for N-acetylcysteine (NAC).
+"""150-line Rumack–Matthew nomogram (US/Canada), for educational decision support.
 
-Zero-dependency Python implementation with single and batch evaluation.
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+Applies to reliably timed acute acetaminophen ingestion assessed 4–24 h after
+the start of ingestion. Not valid for repeated supratherapeutic ingestion (>24 h),
+unreliable timing or modified-release products. Does not replace toxicology advice.
 """
-
 import argparse
 import csv
 import json
 import math
 import os
-import pathlib
-import sys
-from typing import Dict, Any, List, Optional
+from pathlib import Path
+import tempfile
 
 
-def _is_finite_number(val) -> bool:
-    """Check that a numeric value is finite (not NaN or Infinity)."""
-    if not isinstance(val, (int, float)):
-        return False
-    return math.isfinite(val)
+VALID_PATTERNS = ("acute", "repeated", "unknown", "modified_release")
+DISCLAIMER = (
+    "Decision support only. Consult a poison center or clinical toxicologist; "
+    "do not delay assessment or N-acetylcysteine while awaiting this calculation."
+)
 
 
-def calculate_metrics(**kwargs) -> Dict[str, Any]:
+def _finite_nonnegative(value, field):
+    if isinstance(value, bool):
+        raise ValueError(f"{field} must be a finite nonnegative number")
+    try:
+        number = float(value)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"{field} must be a finite nonnegative number") from exc
+    if not math.isfinite(number) or number < 0:
+        raise ValueError(f"{field} must be a finite nonnegative number")
+    return number
+
+
+def treatment_line(hours_post_ingestion):
+    """150 µg/mL at 4 h, falling with an assumed 4-hour half-life."""
+    hours = _finite_nonnegative(hours_post_ingestion, "hours_post_ingestion")
+    if not 4 <= hours <= 24:
+        raise ValueError("Treatment line is defined only from 4 to 24 hours")
+    return 150.0 * 2 ** (-(hours - 4.0) / 4.0)
+
+
+def calculate_metrics(
+    hours_post_ingestion,
+    concentration_mcg_ml,
+    *,
+    ingestion_pattern="acute",
+    time_known=True,
+    delayed_absorption=False,
+):
+    """Compare an acetaminophen level with the 150-line when applicable.
+
+    µg/mL is numerically identical to mg/L. Values on the line count as above.
+    A below-line result is not a stand-alone decision to withhold treatment.
     """
-    Core domain algorithm for paracetamol-rumack-matthew-nomogram.
-    Validates inputs, rejects NaN/Infinity, and produces a deterministic score.
-    """
-    params = {}
-    for k, v in kwargs.items():
-        if v is not None:
-            try:
-                fv = float(v)
-                # Reject NaN and Infinity — non-finite values corrupt scoring
-                if not math.isfinite(fv):
-                    continue
-                params[k] = fv
-            except (ValueError, TypeError):
-                s = str(v)
-                # Skip empty strings
-                if s.strip():
-                    params[k] = s
+    hours = _finite_nonnegative(hours_post_ingestion, "hours_post_ingestion")
+    concentration = _finite_nonnegative(concentration_mcg_ml, "concentration_mcg_ml")
+    if ingestion_pattern not in VALID_PATTERNS:
+        raise ValueError("ingestion_pattern must be one of: " + ", ".join(VALID_PATTERNS))
+    if not isinstance(time_known, bool) or not isinstance(delayed_absorption, bool):
+        raise ValueError("time_known and delayed_absorption must be booleans")
 
-    # Deterministic domain logic
-    numeric_vals = [val for val in params.values() if isinstance(val, (int, float)) and math.isfinite(val)]
-    primary_val = numeric_vals[0] if numeric_vals else 1.0
+    reasons = []
+    if not time_known:
+        reasons.append("Ingestion timing is unknown or unreliable.")
+    if ingestion_pattern != "acute":
+        reasons.append("Nomogram is not validated for this ingestion pattern/formulation.")
+    if hours < 4:
+        reasons.append("A level before 4 hours cannot be interpreted on the nomogram.")
+    elif hours > 24:
+        reasons.append("The nomogram is not applicable after 24 hours.")
 
-    score = primary_val
-    for idx, nv in enumerate(numeric_vals[1:], start=2):
-        score += nv * (1.0 / idx)
-
-    rounded_score = round(score, 2)
-    
-    # Classification / tiering
-    if rounded_score < 10.0:
-        tier = "Low / Standard"
-        action = "Standard monitoring or negative cutoff"
-    elif rounded_score < 25.0:
-        tier = "Moderate / Intermediate"
-        action = "Close observation or secondary evaluation"
+    cautions = []
+    if delayed_absorption:
+        cautions.append(
+            "Delayed absorption is possible (e.g. extended-release product or "
+            "anticholinergic/opioid coingestion); repeat levels may be required."
+        )
+    if reasons:
+        status = "not_applicable"
+        line = None
+        recommendation = "Do not use the nomogram: " + " ".join(reasons) + " Seek urgent toxicology advice."
     else:
-        tier = "High / Severe"
-        action = "Urgent clinical intervention or primary positive finding"
+        line = treatment_line(hours)
+        if concentration >= line:
+            status = "at_or_above_treatment_line"
+            recommendation = (
+                "At or above the 150-line. Promptly assess for N-acetylcysteine "
+                "using local poisoning protocols and toxicology consultation."
+            )
+        else:
+            status = "below_treatment_line"
+            recommendation = (
+                "Below the 150-line at this time point; this does not independently "
+                "exclude toxicity or eliminate the need for further testing/treatment."
+            )
 
     return {
-        "tool": "paracetamol-rumack-matthew-nomogram",
-        "score": rounded_score,
-        "classification": tier,
-        "clinical_recommendation": action,
-        "inputs_evaluated": len(params),
+        "hours_post_ingestion": hours,
+        "concentration_mcg_ml": concentration,
+        "ingestion_pattern": ingestion_pattern,
+        "status": status,
+        "treatment_line_mcg_ml": round(line, 4) if line is not None else None,
+        "ratio_to_treatment_line": round(concentration / line, 4) if line else None,
+        "cautions": cautions,
+        "clinical_recommendation": recommendation,
+        "disclaimer": DISCLAIMER,
     }
 
 
-def process_single(args) -> None:
-    kwargs = vars(args)
-    kwargs.pop("func", None)
-    res = calculate_metrics(**kwargs)
-    print(json.dumps(res, indent=2))
-
-
-def _validate_safe_path(path_str: str) -> str:
-    """Validate that a file path is safe (no null bytes, no traversal)."""
-    if "\x00" in path_str:
-        raise ValueError("Path contains null bytes")
-    p = pathlib.Path(path_str).resolve()
-    return str(p)
-
-
-def process_batch(input_csv: str, output_csv: str) -> None:
-    input_path = _validate_safe_path(input_csv)
-    output_path = _validate_safe_path(output_csv)
-
-    if not os.path.isfile(input_path):
-        raise FileNotFoundError(f"Input CSV not found: {input_csv}")
-
-    with open(input_path, mode="r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        fieldnames = list(reader.fieldnames or [])
-        rows = list(reader)
-
-    out_fields = fieldnames + ["score", "classification", "clinical_recommendation"]
-    out_rows = []
-
-    for r in rows:
-        calc_res = calculate_metrics(**r)
-        row_dict = dict(r)
-        row_dict["score"] = calc_res["score"]
-        row_dict["classification"] = calc_res["classification"]
-        row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
-        out_rows.append(row_dict)
-
-    with open(output_path, mode="w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
-        writer.writeheader()
-        writer.writerows(out_rows)
-
-    print(f"Processed {len(out_rows)} records -> {output_csv}")
+def process_batch(input_csv, output_csv):
+    """Evaluate CSV rows; a malformed row aborts without replacing the output."""
+    in_path = Path(input_csv).expanduser().resolve()
+    out_path = Path(output_csv).expanduser().resolve()
+    if in_path == out_path:
+        raise ValueError("Input and output paths must differ")
+    required = {"hours_post_ingestion", "concentration_mcg_ml"}
+    count = 0
+    temp_path = None
+    try:
+        with in_path.open("r", encoding="utf-8-sig", newline="") as source:
+            reader = csv.DictReader(source)
+            fields = list(reader.fieldnames or [])
+            missing = required.difference(fields)
+            if missing:
+                raise ValueError("CSV missing required fields: " + ", ".join(sorted(missing)))
+            out_fields = fields + [
+                key for key in ("status", "treatment_line_mcg_ml", "clinical_recommendation")
+                if key not in fields
+            ]
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", newline="", dir=out_path.parent,
+                prefix=".nomogram-", suffix=".csv", delete=False
+            ) as dest:
+                temp_path = Path(dest.name)
+                writer = csv.DictWriter(dest, fieldnames=out_fields)
+                writer.writeheader()
+                for index, row in enumerate(reader, start=2):
+                    try:
+                        result = calculate_metrics(
+                            row["hours_post_ingestion"], row["concentration_mcg_ml"],
+                            ingestion_pattern=row.get("ingestion_pattern") or "acute",
+                            time_known=(row.get("time_known", "true").strip().lower() == "true"),
+                            delayed_absorption=(row.get("delayed_absorption", "false").strip().lower() == "true"),
+                        )
+                    except (ValueError, TypeError) as exc:
+                        raise ValueError(f"CSV row {index}: {exc}") from exc
+                    writer.writerow({
+                        **row,
+                        "status": result["status"],
+                        "treatment_line_mcg_ml": result["treatment_line_mcg_ml"],
+                        "clinical_recommendation": result["clinical_recommendation"],
+                    })
+                    count += 1
+        os.replace(temp_path, out_path)
+        temp_path = None
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+    print(f"Processed {count} rows -> {output_csv}")
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Rumack-Matthew Nomogram for Acetaminophen Toxicity")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    # Single parser
-    single_parser = subparsers.add_parser("single", help="Evaluate single case")
-    single_parser.add_argument("--v1", type=float, default=10.0, help="Primary parameter")
-    single_parser.add_argument("--v2", type=float, default=5.0, help="Secondary parameter")
-    single_parser.add_argument("--v3", type=float, default=2.0, help="Tertiary parameter")
-    single_parser.set_defaults(func=process_single)
-
-    # Batch parser
-    batch_parser = subparsers.add_parser("batch", help="Process batch CSV")
-    batch_parser.add_argument("-i", "--input", required=True, help="Input CSV")
-    batch_parser.add_argument("-o", "--output", default="results.csv", help="Output CSV")
-
+    parser = argparse.ArgumentParser(description="Acetaminophen 150-line nomogram (4–24 h)")
+    commands = parser.add_subparsers(dest="command", required=True)
+    single = commands.add_parser("single", help="Evaluate one acute ingestion")
+    single.add_argument("--hours", type=float, required=True, help="Hours from start of ingestion")
+    single.add_argument("--concentration", type=float, required=True, help="Serum acetaminophen in µg/mL (= mg/L)")
+    single.add_argument("--pattern", choices=VALID_PATTERNS, default="acute")
+    single.add_argument("--time-unknown", action="store_true")
+    single.add_argument("--delayed-absorption", action="store_true")
+    batch = commands.add_parser("batch", help="Process CSV with hours_post_ingestion and concentration_mcg_ml")
+    batch.add_argument("-i", "--input", required=True)
+    batch.add_argument("-o", "--output", default="results.csv")
     args = parser.parse_args(argv)
-
-    if args.command == "single":
-        args.func(args)
-    elif args.command == "batch":
-        process_batch(args.input, args.output)
+    try:
+        if args.command == "batch":
+            process_batch(args.input, args.output)
+        else:
+            print(json.dumps(calculate_metrics(
+                args.hours, args.concentration, ingestion_pattern=args.pattern,
+                time_known=not args.time_unknown, delayed_absorption=args.delayed_absorption
+            ), indent=2))
+    except (ValueError, OSError) as exc:
+        parser.exit(2, f"Error: {exc}\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
