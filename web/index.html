@@ -1,236 +1,127 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paracetamol Rumack Matthew Nomogram — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Paracetamol Rumack Matthew Nomogram</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Paracetamol Rumack Matthew Nomogram Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "paracetamol-rumack-matthew-nomogram",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
-</body>
-</html>
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rumack–Matthew Nomogram | 150-Line Reference</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#eef3f6;color:#172d3a}
+*{box-sizing:border-box}body{margin:0;line-height:1.5}
+main{max-width:1100px;margin:auto;padding:28px 20px 50px}h1{font-size:clamp(1.5rem,3vw,2.1rem);margin:0 0 5px}h2{font-size:1.15rem;margin:0 0 15px}
+p{margin:8px 0}.muted,.hint{color:#4a626f}.hint{font-size:.83rem}.notice{padding:12px 16px;border-left:4px solid #b05a16;background:#fff6e7;border-radius:5px;margin:20px 0}
+.layout{display:grid;grid-template-columns:minmax(290px,.85fr) minmax(0,1.15fr);gap:18px;margin-bottom:18px}
+.panel{border-radius:12px;border:1px solid #cfdfe5;background:white;padding:20px;min-width:0}
+.field{margin-bottom:15px}label{display:block;font-size:.9rem;font-weight:650;margin-bottom:4px}
+input[type=number],select{display:block;width:100%;font:inherit;color:inherit;padding:10px;background:white;border:1px solid #99aeba;border-radius:6px;min-height:45px}
+.check{display:flex;gap:9px;align-items:flex-start}.check label{font-size:.84rem;font-weight:500}.check input{height:18px;width:18px;flex:none;margin-top:3px}
+button{width:100%;background:#126080;color:white;border:0;border-radius:6px;padding:11px;cursor:pointer;font:inherit;font-weight:650}
+button:hover{background:#104c63}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f0ab28;outline-offset:2px}
+.secondary{background:#e3edf1;color:#183c4d;margin-top:9px}.secondary:hover{background:#cbdde5}
+.outcome{border-radius:7px;background:#f4f9fb;border:1px solid #cee0e7;padding:14px;margin-bottom:15px}
+.outcome strong{display:block}.outcome.high{background:#fff0ed;border-color:#ba716b}.outcome.low{background:#ecf7f2;border-color:#77b59e}.outcome.na{background:#fff7e5;border-color:#cb9b45}
+#chart{display:block;width:100%;height:auto;max-height:360px}
+ul{padding-left:20px}a{color:#126080}
+@media(max-width:760px){.layout{grid-template-columns:1fr}main{padding:18px 12px 30px}.panel{padding:16px}}
+</style></head><body><main>
+<header><h1>Rumack–Matthew nomogram</h1><p class="muted">Paracetamol / acetaminophen • US/Canada 150 µg/mL treatment line</p></header>
+<p class="notice"><strong>Suspected overdose is urgent.</strong> Contact emergency services or a poison center immediately. This reference does not replace clinical assessment. Do not delay N-acetylcysteine while awaiting a calculation.</p>
+<div class="layout">
+<section class="panel"><h2>Patient-independent measurements</h2>
+<form id="form">
+<div class="field"><label for="hours">Hours since ingestion began</label><input type="number" id="hours" min="0" step="any" value="8" required><span class="hint">Valid nomogram interval: 4–24 hours.</span></div>
+<div class="field"><label for="level">Serum acetaminophen (µg/mL = mg/L)</label><input type="number" id="level" min="0" step="any" value="75" required></div>
+<div class="field"><label for="pattern">Ingestion pattern / formulation</label><select id="pattern">
+<option value="acute">Acute ingestion completed within 24 h</option>
+<option value="repeated">Repeated supratherapeutic ingestion over 24 h</option>
+<option value="unknown">Pattern unknown</option>
+<option value="modified_release">Modified-release formulation</option>
+</select></div>
+<div class="field check"><input type="checkbox" id="known"><label for="known">Ingestion start time is known and reliable (confirm before evaluation).</label></div>
+<div class="field check"><input type="checkbox" id="delayed"><label for="delayed">Possible delayed absorption (extended-release or opioid/anticholinergic coingestion).</label></div>
+<button type="submit">Evaluate concentration</button>
+</form>
+<button id="export" class="secondary" disabled type="button">Export result as CSV</button>
+<p class="hint">All calculations are performed locally. No clinical data are uploaded or stored.</p>
+</section>
+<section class="panel"><h2>Nomogram and interpretation</h2>
+<div class="outcome" id="outcome" role="status" aria-live="polite">Enter values and confirm the timing to evaluate.</div>
+<svg id="chart" viewBox="0 0 630 390" aria-label="Logarithmic concentration plotted against hours after ingestion" role="img"></svg>
+<p class="hint">Red: 150 µg/mL at 4 h, halving every 4 hours. Blue: sample, when eligible. The vertical axis is logarithmic.</p>
+</section></div>
+<section class="panel"><h2>Clinical scope and limitations</h2>
+<p>Applicable only after acute ingestion with a reliable start time and concentration measured 4–24 hours later. Do not use for an unknown ingestion time, repeated supratherapeutic exposure or modified-release formulations. Samples obtained before 4 h cannot establish nomogram risk.</p>
+<p>Extended-release products and drugs causing delayed gastric emptying may require repeat levels. A below-line concentration does not independently exclude hepatotoxicity or the need for treatment. This uses the US/Canada 150-line; other jurisdictions, including the UK, use different thresholds.</p>
+<p>Reference: <a target="_blank" rel="noopener noreferrer" href="https://doi.org/10.1001/jamanetworkopen.2023.27739">Dart et al., JAMA Network Open 2023 consensus statement</a>. This software is not clinically validated or certified as a medical device.</p>
+</section></main>
+<script src="./nomogram.js"></script><script>
+"use strict";
+(function(){
+ const form=document.getElementById("form"), chart=document.getElementById("chart");
+ const outcome=document.getElementById("outcome"), exportButton=document.getElementById("export");
+ const NS="http://www.w3.org/2000/svg", L=65,R=612,T=24,B=331;
+ const x=h=>L+(h-4)/20*(R-L);
+ const y=c=>T+(Math.log2(400)-Math.log2(Math.max(2,c)))/(Math.log2(400)-Math.log2(2))*(B-T);
+ let last=null;
+ function mark(tag, attrs, txt){
+   const el=document.createElementNS(NS,tag);
+   Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
+   if(txt!==undefined) el.textContent=txt;
+   chart.appendChild(el);
+ }
+ function graph(result){
+   chart.replaceChildren();
+   for(const h of [4,8,12,16,20,24]){
+     mark("line",{x1:x(h),y1:T,x2:x(h),y2:B,stroke:"#e0e9ee"});
+     mark("text",{x:x(h),y:353,"text-anchor":"middle","font-size":13,fill:"#405b69"},h);
+   }
+   for(const c of [2,5,10,20,50,100,200,400]){
+     mark("line",{x1:L,y1:y(c),x2:R,y2:y(c),stroke:"#e0e9ee"});
+     mark("text",{x:54,y:y(c)+4,"text-anchor":"end","font-size":12,fill:"#405b69"},c);
+   }
+   mark("text",{x:345,y:378,"text-anchor":"middle","font-size":13,fill:"#405b69"},"Hours since ingestion began");
+   mark("text",{x:14,y:184,transform:"rotate(-90 14 184)","text-anchor":"middle","font-size":12,fill:"#405b69"},"Concentration (µg/mL, log)");
+   const path=[];
+   for(let h=4;h<=24;h+=.25)path.push((path.length?"L":"M")+x(h)+","+y(Nomogram.lineAt(h)));
+   mark("path",{d:path.join(" "),stroke:"#b3453d","stroke-width":3,fill:"none"});
+   if(result && result.line!==null){
+     const sampleY=Math.max(T,Math.min(B,y(result.concentration)));
+     mark("circle",{cx:x(result.hours),cy:sampleY,r:7,fill:"#126080",stroke:"white","stroke-width":2});
+     if(result.concentration>400||result.concentration<2)
+       mark("text",{x:x(result.hours),y:sampleY===T?15:349,"text-anchor":"middle","font-size":11,fill:"#126080"},"Sample outside plotted concentration range");
+   }
+ }
+ function show(result){
+   outcome.className="outcome "+(result.status==="not_applicable"?"na":result.status==="at_or_above_treatment_line"?"high":"low");
+   outcome.replaceChildren();
+   const heading=document.createElement("strong");
+   heading.textContent=result.status==="not_applicable"?"Nomogram not applicable":result.status==="at_or_above_treatment_line"?"At or above 150-line":"Below 150-line";
+   outcome.appendChild(heading);
+   for(const text of [(result.line===null?result.reasons.join(" "):
+     "Treatment-line threshold: "+result.line.toFixed(2)+" µg/mL at "+result.hours+" h."),result.recommendation,...result.cautions]){
+     const p=document.createElement("p");p.textContent=text;outcome.appendChild(p);
+   }
+ }
+ form.addEventListener("submit",event=>{
+   event.preventDefault();last=null;exportButton.disabled=true;
+   try{
+     const result=Nomogram.evaluate({
+       hours:document.getElementById("hours").valueAsNumber,
+       concentration:document.getElementById("level").valueAsNumber,
+       pattern:document.getElementById("pattern").value,
+       timeKnown:document.getElementById("known").checked,
+       delayedAbsorption:document.getElementById("delayed").checked
+     });
+     last=result;exportButton.disabled=false;show(result);graph(result);
+   }catch(error){outcome.className="outcome na";outcome.textContent=error.message;graph(null);}
+ });
+ exportButton.addEventListener("click",()=>{
+   if(!last)return;
+   const values=[last.hours,last.concentration,last.status,last.line,last.recommendation];
+   const row=values.map(value=>'"'+String(value==null?"":value).replace(/"/g,'""')+'"').join(",");
+   const csv="hours_post_ingestion,concentration_mcg_ml,status,treatment_line_mcg_ml,recommendation\n"+row+"\n";
+   const uri=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+   const a=document.createElement("a");a.href=uri;a.download="nomogram-result.csv";document.body.appendChild(a);a.click();a.remove();
+   URL.revokeObjectURL(uri);
+ });
+ graph(null);
+})();
+</script></body></html>
