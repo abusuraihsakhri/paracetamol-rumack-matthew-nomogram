@@ -101,8 +101,8 @@ def test_cli(capsys):
 def test_rejects_invalid_boolean_in_csv(tmp_path):
     source = tmp_path / "cases.csv"
     source.write_text(
-        "hours_post_ingestion,concentration_mcg_ml,delayed_absorption\\n"
-        "8,75,unsure\\n".replace("\\\\n", "\\n"), encoding="utf-8"
+        "hours_post_ingestion,concentration_mcg_ml,delayed_absorption\n"
+        "8,75,unsure\n", encoding="utf-8"
     )
     with pytest.raises(ValueError, match="delayed_absorption"):
         process_batch(source, tmp_path / "out.csv")
@@ -111,8 +111,8 @@ def test_rejects_invalid_boolean_in_csv(tmp_path):
 def test_csv_spreadsheet_injection_escaped(tmp_path):
     source = tmp_path / "cases.csv"
     source.write_text(
-        "case,hours_post_ingestion,concentration_mcg_ml\\n"
-        "=HYPERLINK(A1),8,75\\n".replace("\\\\n", "\\n"), encoding="utf-8"
+        "case,hours_post_ingestion,concentration_mcg_ml\n"
+        "=HYPERLINK(A1),8,75\n", encoding="utf-8"
     )
     output = tmp_path / "out.csv"
     process_batch(source, output)
