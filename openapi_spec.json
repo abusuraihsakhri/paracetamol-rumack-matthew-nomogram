@@ -2,111 +2,109 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Paracetamol Rumack Matthew Nomogram API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
-    "contact": {
-      "name": "Dr. Abu Suraih Sakhri",
-      "url": "https://github.com/abusuraihsakhri"
-    }
+    "description": "Reference nomogram (US/Canada 150-line) plus nonclinical legacy audit utilities. Runtime /openapi.json is authoritative.",
+    "version": "3.1.0"
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health and metadata check",
+        "summary": "Health",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Status"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "Counts for the legacy audit supervisor",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "Counters"
+          }
+        }
+      }
+    },
+    "/api/nomogram": {
+      "post": {
+        "summary": "Calculate the 150-line nomogram for a clinical reference",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hours_post_ingestion",
+                  "concentration_mcg_ml"
+                ],
+                "properties": {
+                  "hours_post_ingestion": {
+                    "type": "number"
+                  },
+                  "concentration_mcg_ml": {
+                    "type": "number"
+                  },
+                  "ingestion_pattern": {
+                    "type": "string",
+                    "enum": [
+                      "acute",
+                      "repeated",
+                      "unknown",
+                      "modified_release"
+                    ],
+                    "default": "acute"
+                  },
+                  "time_known": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "delayed_absorption": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nomogram comparison or not-applicable explanation"
+          },
+          "422": {
+            "description": "Invalid measurement"
           }
         }
       }
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "task_id": {
-                    "type": "string"
-                  },
-                  "target_identifier": {
-                    "type": "string"
-                  },
-                  "primary_metric": {
-                    "type": "number"
-                  },
-                  "secondary_metric": {
-                    "type": "number"
-                  },
-                  "status_descriptor": {
-                    "type": "string"
-                  },
-                  "is_critical_flag": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "task_id",
-                  "target_identifier",
-                  "primary_metric"
-                ]
-              }
-            }
-          }
-        },
+        "summary": "Nonclinical legacy audit demonstration",
         "responses": {
           "200": {
-            "description": "Consensus dossier with HMAC signature"
+            "description": "Audit dossier"
           }
         }
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "query": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "query"
-                ]
-              }
-            }
-          }
-        },
+        "summary": "Nonclinical mock response",
         "responses": {
           "200": {
-            "description": "Supervisory response"
+            "description": "Mock text"
           }
         }
       }
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "In-memory legacy audit logs",
         "responses": {
           "200": {
-            "description": "Cryptographic audit trail"
+            "description": "Hash-chain status"
           }
         }
       }

@@ -1,147 +1,64 @@
-# Paracetamol Rumack Matthew Nomogram
+# Paracetamol Rumack–Matthew Nomogram
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** Standard Clinical Formulations & ISO/IEC Quality Frameworks
+A reference implementation of the US/Canada acetaminophen/paracetamol **150 µg/mL treatment line**, including a standalone browser interface, Python single-case and batch calculator, and FastAPI endpoint.
 
-<div align="center">
+> **Clinical safety:** This project has not undergone clinical validation and is not a medical device. It must not be the sole basis of treatment. For suspected poisoning, immediately contact emergency services or a poison center; do not delay N-acetylcysteine pending a calculation.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+## Browser application
 
-</div>
+Open [web/index.html](web/index.html) in a modern browser, or start a local web server using:
 
----
+    python -m http.server 8080 -d web
 
-## What It Does
+Then visit http://localhost:8080. Enter elapsed time from the start of ingestion and the measured acetaminophen concentration, verify the history, and evaluate. A logarithmic nomogram plot displays eligible points. Results can be exported as CSV.
 
-Rumack-Matthew Nomogram for Acetaminophen Toxicity. Evaluates 4-to-24 hour post-ingestion acetaminophen serum levels against the 150 mcg/mL treatment line for N-acetylcysteine (NAC).
+The browser application runs entirely in JavaScript: no Python, backend, cookies, external network requests, browser storage or clinical identifiers are required. Do not enter patient information. A GitHub Pages workflow is included; a live URL will be published here only after deployment has been verified.
 
-Python implementation with single and batch evaluation modes, FastAPI REST API, and enterprise-grade security features.
+## Model and applicability
 
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+For an **acute ingestion completed within 24 hours**, with reliably known start time and a serum level sampled at **4–24 hours**, the 150-line is:
 
----
+    threshold (µg/mL) = 150 × 2 ^ (−(hours − 4) / 4)
 
-## Key Capabilities & Algorithmic Modules
+Reference thresholds: 4 h = 150; 8 h = 75; 12 h = 37.5; 16 h = 18.75; 20 h = 9.375; 24 h = 4.6875 µg/mL. Concentrations on or above the line are classified at/above the treatment line. The tool provides no automatic treatment order.
 
-### Analytical Functions
+The nomogram is **not applicable** with unknown/unreliable timing, repeated supratherapeutic ingestion spanning more than 24 h, modified-release products, or samples outside 4–24 hours. Extended-release formulations and opioid/anticholinergic coingestions can result in delayed absorption and require repeat levels. Below-line results do not independently exclude toxicity. Jurisdictions may use different thresholds (e.g. UK 100-line), so this implementation is specifically the US/Canada 150-line.
 
-- **`calculate_metrics()`** — Core scoring algorithm with input validation (rejects NaN/Infinity/empty values)
-- **`process_single()`** — Evaluate a single case via CLI
-- **`process_batch()`** — Process CSV batches with path validation and error handling
-- **`main()`** — CLI entry point
+Primary reference: Dart RC et al. Management of Acetaminophen Poisoning in the US and Canada: A Consensus Statement. JAMA Network Open. 2023;6(8):e2327739. https://doi.org/10.1001/jamanetworkopen.2023.27739
 
-### Enterprise Security
+## Python installation and CLI
 
-- **Zero-PHI Outbound Interceptor** — AST and regex inspection blocking SSNs, MRNs, phone numbers, emails, and patient identifiers
-- **Tamper-Evident HMAC-SHA256 Audit Trail** — Chained, cryptographically signed logs for every evaluation
-- **Path Traversal Protection** — Input/output file paths validated for null bytes and resolved safely
+Requires Python 3.10 or later.
 
-### REST API (FastAPI)
+    python -m pip install -e ".[dev]"
+    python rumack_matthew.py single --hours 8 --concentration 75
+    python rumack_matthew.py single --hours 8 --concentration 20 --pattern repeated
+    python rumack_matthew.py batch -i sample.csv -o results.csv
 
-- `GET /health` — Health check
-- `GET /metrics` — Operational metrics
-- `POST /api/audit` — Submit task for evaluation
-- `POST /api/chat` — Supervisory chat query
-- `GET /api/audit/logs` — Retrieve and verify audit trail
+The installed CLI command is paracetamol-nomogram. CSV input requires columns hours_post_ingestion and concentration_mcg_ml. Optional columns: ingestion_pattern, time_known and delayed_absorption (true/false). Invalid rows stop batch processing without overwriting an existing output file. Do not include identifiers or personal health information.
 
----
+## FastAPI and legacy utilities
 
-## Installation
+    python cli.py serve --host 127.0.0.1 --port 8000
 
-```bash
-pip install -e .
-```
+For the clinical reference, POST JSON to /api/nomogram, for example:
 
-For development with testing:
-```bash
-pip install -e ".[dev]"
-```
+    {"hours_post_ingestion": 8, "concentration_mcg_ml": 75, "ingestion_pattern": "acute"}
 
----
+Interactive generated documentation: http://localhost:8000/docs. The separate legacy /api/audit, /api/chat, and /api/audit/logs endpoints remain for nonclinical demonstrations. Their arbitrary worker thresholds, mock chat text and regex-based PHI checks are **not** validated clinical logic or guaranteed de-identification. Do not expose the backend publicly without authentication, TLS and a security/privacy review.
 
-## CLI Quickstart & Usage
-
-### 1. Single Case Evaluation
-```bash
-python rumack_matthew.py single --v1 14.5 --v2 4.2 --v3 1.8
-```
-
-### 2. Batch CSV Processing
-```bash
-python rumack_matthew.py batch -i sample.csv -o results.csv
-```
-
-### 3. Enterprise CLI (with audit trail)
-```bash
-python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
-python cli.py batch -i sample.csv -o results.csv
-python cli.py verify-audit
-```
-
-### 4. Launch REST API Server
-```bash
-python cli.py serve --host 127.0.0.1 --port 8000
-```
-
-### Parameter Reference
-- `--v1` — Primary measurement (default: 10.0)
-- `--v2` — Secondary parameter (default: 5.0)
-- `--v3` — Tertiary parameter (default: 2.0)
-
-### Input Data Schema (CSV)
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `Patient_ID` | Patient identifier | Required |
-| `v1` | Primary measurement | Required |
-| `v2` | Secondary parameter | Required |
-| `v3` | Tertiary parameter | Required |
-
----
+Docker Compose requires a strong AUDIT_SECRET_KEY in the environment before running docker compose up --build; it does not ship with a default secret. The in-memory audit trail is not a durable medical record.
 
 ## Testing
 
-Run the automated test suite:
+    python -m pip install -e ".[dev]"
+    python -m pytest -q
+    python -m compileall -q rumack_matthew.py cli.py agents
+    node --check web/nomogram.js
+    node --test web/nomogram.test.cjs
 
-```bash
-pytest -v
-```
+CI covers Python 3.10–3.12 and Node.js 22. The static browser requires JavaScript and works without Pyodide.
 
-Execute high-throughput batch simulation benchmarks:
+## License
 
-```bash
-python simulator.py 1000
-```
-
----
-
-## Security Configuration
-
-Set the audit secret key via environment variable for production:
-
-```bash
-export AUDIT_SECRET_KEY="your-secure-random-key"
-```
-
-If not set, a cryptographically secure random key is generated per process (suitable for development/testing, but audit trail verification will not persist across restarts).
-
----
-
-## Container Deployment
-
-```bash
-docker build -t paracetamol-rumack-matthew-nomogram .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secure-key paracetamol-rumack-matthew-nomogram
-```
-
-Or with Docker Compose:
-
-```bash
-docker-compose up -d
-```
+MIT. See [LICENSE](LICENSE).

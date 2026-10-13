@@ -12,6 +12,13 @@ from agents.base import AuditLogger
 supervisor = SystemSupervisor(model_provider="mock")
 
 
+def parse_csv_bool(value):
+    normalized = str(value).strip().lower()
+    if normalized not in {"true", "false", "1", "0"}:
+        raise ValueError("is_critical_flag must be true, false, 1 or 0")
+    return normalized in {"true", "1"}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="paracetamol-rumack-matthew-nomogram", description="Paracetamol Rumack Matthew Nomogram")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -94,7 +101,7 @@ def main(argv=None):
                 primary_metric=float(r.get("primary_metric", 15.0)),
                 secondary_metric=float(r.get("secondary_metric", 5.0)),
                 status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
+                is_critical_flag=parse_csv_bool(r.get("is_critical_flag", "false")),
             )
             dossier = supervisor.process_task(payload)
             row_dict = dict(r)
