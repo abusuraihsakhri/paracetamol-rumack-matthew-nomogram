@@ -28,3 +28,16 @@ def test_api_not_applicable():
         "concentration_mcg_ml": 100,
     })
     assert res.json()["status"] == "not_applicable"
+
+def test_sensitive_identifier_rejected_without_server_error():
+    res = client.post("/api/chat", json={"query": "Patient MRN-12345678"})
+    assert res.status_code == 400
+    assert res.json()["detail"] == "Sensitive identifier rejected"
+
+
+def test_legacy_payload_rejects_nonfinite():
+    res = client.post("/api/audit", json={
+        "task_id": "T", "target_identifier": "KEY",
+        "primary_metric": "NaN"
+    })
+    assert res.status_code == 422

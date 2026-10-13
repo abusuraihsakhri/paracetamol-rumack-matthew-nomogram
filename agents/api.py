@@ -1,7 +1,7 @@
 """FastAPI endpoints for nomogram calculation and legacy operations."""
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
-from .base import AuditLogger
+from .base import AuditLogger, SecurityException
 from .models import SystemTaskPayload
 from .supervisor import SystemSupervisor
 from rumack_matthew import calculate_metrics
@@ -50,13 +50,18 @@ def api_nomogram(payload: NomogramRequest):
 
 @app.post("/api/audit")
 def api_audit(payload: SystemTaskPayload):
-    return supervisor.process_task(payload).to_dict()
+    try:
+        return supervisor.process_task(payload).to_dict()
+    except SecurityException as exc:
+        raise HTTPException(status_code=422, detail="Sensitive identifier rejected") from exc
 
 
 @app.post("/api/chat")
 def api_chat(req: ChatRequest):
     try:
         return {"response": supervisor.query_supervisory_chat(req.query)}
+    except SecurityException as exc:
+        raise HTTPException(status_code=400, detail="Sensitive identifier rejected") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
