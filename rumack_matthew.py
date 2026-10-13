@@ -109,6 +109,24 @@ def calculate_metrics(
     }
 
 
+def _csv_bool(value, field, default):
+    if value is None or str(value).strip() == "":
+        return default
+    normalized = str(value).strip().lower()
+    if normalized in ("true", "1"):
+        return True
+    if normalized in ("false", "0"):
+        return False
+    raise ValueError(f"{field} must be true/false or 1/0")
+
+
+def _safe_csv_cell(value):
+    """Prevent exported user-supplied strings from becoming spreadsheet formulas."""
+    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
 def process_batch(input_csv, output_csv):
     """Evaluate CSV rows; a malformed row aborts without replacing the output."""
     in_path = Path(input_csv).expanduser().resolve()
@@ -123,6 +141,8 @@ def process_batch(input_csv, output_csv):
             reader = csv.DictReader(source)
             fields = list(reader.fieldnames or [])
             missing = required.difference(fields)
+            if len(fields) != len(set(fields)):
+                raise ValueError("CSV contains duplicate column names")
             if missing:
                 raise ValueError("CSV missing required fields: " + ", ".join(sorted(missing)))
             out_fields = fields + [
@@ -141,17 +161,17 @@ def process_batch(input_csv, output_csv):
                         result = calculate_metrics(
                             row["hours_post_ingestion"], row["concentration_mcg_ml"],
                             ingestion_pattern=row.get("ingestion_pattern") or "acute",
-                            time_known=(row.get("time_known", "true").strip().lower() == "true"),
-                            delayed_absorption=(row.get("delayed_absorption", "false").strip().lower() == "true"),
+                            time_known=_csv_bool(row.get("time_known"), "time_known", True),
+                            delayed_absorption=_csv_bool(row.get("delayed_absorption"), "delayed_absorption", False),
                         )
                     except (ValueError, TypeError) as exc:
                         raise ValueError(f"CSV row {index}: {exc}") from exc
-                    writer.writerow({
+                    writer.writerow({k: _safe_csv_cell(v) for k, v in {
                         **row,
                         "status": result["status"],
                         "treatment_line_mcg_ml": result["treatment_line_mcg_ml"],
                         "clinical_recommendation": result["clinical_recommendation"],
-                    })
+                    }.items()})
                     count += 1
         os.replace(temp_path, out_path)
         temp_path = None

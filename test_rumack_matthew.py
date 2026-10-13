@@ -97,3 +97,25 @@ def test_missing_fields_and_same_file(tmp_path):
 def test_cli(capsys):
     assert main(["single", "--hours", "8", "--concentration", "75"]) == 0
     assert "at_or_above_treatment_line" in capsys.readouterr().out
+
+def test_rejects_invalid_boolean_in_csv(tmp_path):
+    source = tmp_path / "cases.csv"
+    source.write_text(
+        "hours_post_ingestion,concentration_mcg_ml,delayed_absorption\\n"
+        "8,75,unsure\\n".replace("\\\\n", "\\n"), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="delayed_absorption"):
+        process_batch(source, tmp_path / "out.csv")
+
+
+def test_csv_spreadsheet_injection_escaped(tmp_path):
+    source = tmp_path / "cases.csv"
+    source.write_text(
+        "case,hours_post_ingestion,concentration_mcg_ml\\n"
+        "=HYPERLINK(A1),8,75\\n".replace("\\\\n", "\\n"), encoding="utf-8"
+    )
+    output = tmp_path / "out.csv"
+    process_batch(source, output)
+    with output.open(encoding="utf-8", newline="") as f:
+        row = next(csv.DictReader(f))
+    assert row["case"].startswith("'=")
